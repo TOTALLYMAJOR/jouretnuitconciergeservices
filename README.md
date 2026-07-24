@@ -33,8 +33,9 @@ Scripts that need writable project-scoped home, npm, XDG, and temporary paths us
 ## Proposal Payments
 
 Stripe-hosted Checkout is implemented for immutable, accepted-proposal
-deposits. See [`docs/stripe-payments.md`](docs/stripe-payments.md) for the truth
-boundary, required secrets, D1 migration, webhook events, operator issuance
+deposits, with server-only persistence in a private Supabase Postgres schema.
+See [`docs/stripe-payments.md`](docs/stripe-payments.md) for the truth boundary,
+required secrets, Postgres migration, webhook events, operator issuance
 request, and sandbox verification procedure.
 
 ## Workspace Auth Headers

@@ -2,8 +2,8 @@
 
 Jour et Nuit uses Stripe-hosted Checkout for one-time proposal deposits. The
 browser never supplies an amount, currency, description, or acceptance state.
-Those values come from an immutable D1 proposal record created only after the
-proposal has been accepted.
+Those values come from an immutable record in a private Supabase Postgres
+schema created only after the proposal has been accepted.
 
 ## Truth boundary
 
@@ -19,8 +19,11 @@ proposal has been accepted.
 
 ## Required infrastructure
 
-1. Bind the Sites D1 database as `DB`.
-2. Apply the generated SQL migration under `drizzle/`.
+1. Create a dedicated Supabase project and apply the migration under
+   `supabase/migrations/`.
+2. Set `SUPABASE_DATABASE_URL` to the Supabase transaction-pooler connection
+   URL (port `6543`) in the server-side hosting secret store. The database
+   client disables prepared statements for transaction-pooler compatibility.
 3. Store these values in the hosting secret store, never in Git:
    - `STRIPE_API_KEY`: preferably a restricted key with the minimum Checkout
      Session permissions needed by this service.
@@ -86,8 +89,8 @@ For a Stripe sandbox:
 5. Resend a completed event and confirm its event ID appears only once in
    `stripe_webhook_events`.
 6. Confirm the success page remains a return/verification state until the
-   verified webhook updates D1.
+   verified webhook updates Supabase Postgres.
 
-Do not switch to live mode until the D1 migration, HTTPS origin, restricted
-key, webhook signing secret, event subscriptions, replay behavior, and
-operational refund process have each been verified.
+Do not switch to live mode until the Supabase migration, private-schema access,
+HTTPS origin, restricted key, webhook signing secret, event subscriptions,
+replay behavior, and operational refund process have each been verified.

@@ -29,14 +29,15 @@ async function recordEvent(
   message: string,
   objectId: string | null,
 ) {
-  await (await paymentDb())
-    .prepare(
-      `INSERT OR IGNORE INTO stripe_webhook_events (
+  const database = paymentDb();
+  await database`
+      INSERT INTO jour_payments.stripe_webhook_events (
         id, type, object_id, processing_status, message, received_at
-      ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
-    )
-    .bind(event.id, event.type, objectId, processingStatus, message, Date.now())
-    .run();
+      ) VALUES (
+        ${event.id}, ${event.type}, ${objectId}, ${processingStatus},
+        ${message}, ${Date.now()}
+      )
+      ON CONFLICT (id) DO NOTHING`;
 }
 
 async function processDecision(
@@ -56,42 +57,38 @@ async function processDecision(
   }
 
   const now = Date.now();
-  const database = await paymentDb();
-  await database.batch([
-    database
-      .prepare(
-        `INSERT OR IGNORE INTO stripe_webhook_events (
+  const database = paymentDb();
+  await database.begin(async (transaction) => {
+    const inserted = await transaction<{ id: string }[]>`
+        INSERT INTO jour_payments.stripe_webhook_events (
           id, type, object_id, processing_status, message, received_at
-        ) VALUES (?1, ?2, ?3, 'processed', ?4, ?5)`,
-      )
-      .bind(event.id, event.type, session.id, decision.message, now),
-    database
-      .prepare(
-        `UPDATE payment_checkout_sessions
-        SET status = ?1, payment_status = ?2, updated_at = ?3
-        WHERE id = ?4`,
-      )
-      .bind(
-        decision.checkoutStatus,
-        decision.paymentStatus,
-        now,
-        session.id,
-      ),
-    database
-      .prepare(
-        `UPDATE payment_proposals
-        SET status = ?1,
+        ) VALUES (
+          ${event.id}, ${event.type}, ${session.id}, 'processed',
+          ${decision.message}, ${now}
+        )
+        ON CONFLICT (id) DO NOTHING
+        RETURNING id`;
+    if (inserted.length === 0) return;
+
+    await transaction`
+        UPDATE jour_payments.payment_checkout_sessions
+        SET
+          status = ${decision.checkoutStatus},
+          payment_status = ${decision.paymentStatus},
+          updated_at = ${now}
+        WHERE id = ${session.id}`;
+    await transaction`
+        UPDATE jour_payments.payment_proposals
+        SET status = ${decision.proposalStatus},
           deposit_verified_at = CASE
-            WHEN ?1 = 'deposit_verified'
-              THEN COALESCE(deposit_verified_at, ?2)
+            WHEN ${decision.proposalStatus} = 'deposit_verified'
+              THEN COALESCE(deposit_verified_at, ${decision.verifiedAt ?? now})
             ELSE deposit_verified_at
           END,
-          updated_at = ?2
-        WHERE key = ?3
-          AND status <> 'deposit_verified'`,
-      )
-      .bind(decision.proposalStatus, decision.verifiedAt ?? now, proposalKey),
-  ]);
+          updated_at = ${now}
+        WHERE key = ${proposalKey}
+          AND status <> 'deposit_verified'`;
+  });
 }
 
 export async function POST(request: Request) {
@@ -111,7 +108,7 @@ export async function POST(request: Request) {
       event = await stripe.webhooks.constructEventAsync(
         rawBody,
         signature,
-        await requireBinding("STRIPE_WEBHOOK_SECRET"),
+        requireBinding("STRIPE_WEBHOOK_SECRET"),
         undefined,
         Stripe.createSubtleCryptoProvider(),
       );
@@ -122,10 +119,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const replay = await (await paymentDb())
-      .prepare("SELECT id FROM stripe_webhook_events WHERE id = ?1")
-      .bind(event.id)
-      .first<{ id: string }>();
+    const database = paymentDb();
+    const [replay] = await database<{ id: string }[]>`
+      SELECT id
+      FROM jour_payments.stripe_webhook_events
+      WHERE id = ${event.id}
+      LIMIT 1`;
     if (replay) {
       return NextResponse.json({ received: true, replay: true });
     }

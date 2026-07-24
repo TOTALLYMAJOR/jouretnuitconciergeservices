@@ -14,9 +14,9 @@ type ProposalRow = {
   deposit_amount: number;
   currency: string;
   status: PaymentProposal["status"];
-  accepted_at: number;
-  due_at: number | null;
-  deposit_verified_at: number | null;
+  accepted_at: number | string;
+  due_at: number | string | null;
+  deposit_verified_at: number | string | null;
 };
 
 type CheckoutRow = {
@@ -27,8 +27,12 @@ type CheckoutRow = {
   payment_status: CheckoutRecord["paymentStatus"];
   amount_total: number;
   currency: string;
-  expires_at: number | null;
+  expires_at: number | string | null;
 };
+
+function optionalNumber(value: number | string | null) {
+  return value === null ? null : Number(value);
+}
 
 function mapProposal(row: ProposalRow): PaymentProposal {
   return {
@@ -44,9 +48,9 @@ function mapProposal(row: ProposalRow): PaymentProposal {
     depositAmount: row.deposit_amount,
     currency: row.currency,
     status: row.status,
-    acceptedAt: row.accepted_at,
-    dueAt: row.due_at,
-    depositVerifiedAt: row.deposit_verified_at,
+    acceptedAt: Number(row.accepted_at),
+    dueAt: optionalNumber(row.due_at),
+    depositVerifiedAt: optionalNumber(row.deposit_verified_at),
   };
 }
 
@@ -59,62 +63,66 @@ function mapCheckout(row: CheckoutRow): CheckoutRecord {
     paymentStatus: row.payment_status,
     amountTotal: row.amount_total,
     currency: row.currency,
-    expiresAt: row.expires_at,
+    expiresAt: optionalNumber(row.expires_at),
   };
 }
 
 export async function findProposal(proposalId: string, version: number) {
-  const row = await (await paymentDb())
-    .prepare(
-      `SELECT key, proposal_id, version, client_name, client_email,
+  const database = paymentDb();
+  const [row] = await database<ProposalRow[]>`
+      SELECT key, proposal_id, version, client_name, client_email,
         business_name, description, acceptance_reference,
         immutable_fingerprint, deposit_amount, currency, status, accepted_at,
         due_at, deposit_verified_at
-      FROM payment_proposals
-      WHERE proposal_id = ?1 AND version = ?2`,
-    )
-    .bind(proposalId, version)
-    .first<ProposalRow>();
+      FROM jour_payments.payment_proposals
+      WHERE proposal_id = ${proposalId} AND version = ${version}
+      LIMIT 1`;
 
   return row ? mapProposal(row) : null;
 }
 
 export async function findProposalByKey(key: string) {
-  const row = await (await paymentDb())
-    .prepare(
-      `SELECT key, proposal_id, version, client_name, client_email,
+  const database = paymentDb();
+  const [row] = await database<ProposalRow[]>`
+      SELECT key, proposal_id, version, client_name, client_email,
         business_name, description, acceptance_reference,
         immutable_fingerprint, deposit_amount, currency, status, accepted_at,
         due_at, deposit_verified_at
-      FROM payment_proposals
-      WHERE key = ?1`,
-    )
-    .bind(key)
-    .first<ProposalRow>();
+      FROM jour_payments.payment_proposals
+      WHERE key = ${key}
+      LIMIT 1`;
 
   return row ? mapProposal(row) : null;
 }
 
 export async function findLatestCheckout(proposalKey: string) {
-  const row = await (await paymentDb())
-    .prepare(
-      `SELECT id, proposal_key, attempt, status, payment_status, amount_total,
+  const database = paymentDb();
+  const [row] = await database<CheckoutRow[]>`
+      SELECT id, proposal_key, attempt, status, payment_status, amount_total,
         currency, expires_at
-      FROM payment_checkout_sessions
-      WHERE proposal_key = ?1
+      FROM jour_payments.payment_checkout_sessions
+      WHERE proposal_key = ${proposalKey}
       ORDER BY attempt DESC
-      LIMIT 1`,
-    )
-    .bind(proposalKey)
-    .first<CheckoutRow>();
+      LIMIT 1`;
 
   return row ? mapCheckout(row) : null;
 }
 
 export async function findCheckoutWithProposal(sessionId: string) {
-  const row = await (await paymentDb())
-    .prepare(
-      `SELECT
+  const database = paymentDb();
+  const [row] = await database<
+    (ProposalRow & {
+      checkout_id: string;
+      checkout_proposal_key: string;
+      checkout_attempt: number;
+      checkout_status: CheckoutRecord["status"];
+      checkout_payment_status: CheckoutRecord["paymentStatus"];
+      checkout_amount_total: number;
+      checkout_currency: string;
+      checkout_expires_at: number | string | null;
+    })[]
+  >`
+      SELECT
         c.id AS checkout_id,
         c.proposal_key AS checkout_proposal_key,
         c.attempt AS checkout_attempt,
@@ -127,23 +135,10 @@ export async function findCheckoutWithProposal(sessionId: string) {
         p.business_name, p.description, p.acceptance_reference,
         p.immutable_fingerprint, p.deposit_amount, p.currency, p.status,
         p.accepted_at, p.due_at, p.deposit_verified_at
-      FROM payment_checkout_sessions c
-      JOIN payment_proposals p ON p.key = c.proposal_key
-      WHERE c.id = ?1`,
-    )
-    .bind(sessionId)
-    .first<
-      ProposalRow & {
-        checkout_id: string;
-        checkout_proposal_key: string;
-        checkout_attempt: number;
-        checkout_status: CheckoutRecord["status"];
-        checkout_payment_status: CheckoutRecord["paymentStatus"];
-        checkout_amount_total: number;
-        checkout_currency: string;
-        checkout_expires_at: number | null;
-      }
-    >();
+      FROM jour_payments.payment_checkout_sessions c
+      JOIN jour_payments.payment_proposals p ON p.key = c.proposal_key
+      WHERE c.id = ${sessionId}
+      LIMIT 1`;
 
   if (!row) return null;
   return {

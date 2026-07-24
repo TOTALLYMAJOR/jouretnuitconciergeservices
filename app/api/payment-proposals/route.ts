@@ -147,47 +147,30 @@ export async function POST(request: Request) {
     const key = proposalKey(proposalId, Number(version));
     const now = Date.now();
 
-    const database = await paymentDb();
-    const result = await database
-      .prepare(
-        `INSERT INTO payment_proposals (
+    const database = paymentDb();
+    const inserted = await database<{ immutable_fingerprint: string }[]>`
+        INSERT INTO jour_payments.payment_proposals (
           key, proposal_id, version, client_name, client_email, business_name,
           description, acceptance_reference, immutable_fingerprint,
           deposit_amount, currency, status, accepted_at, due_at, created_at,
           updated_at
         ) VALUES (
-          ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11,
-          'deposit_requested', ?12, ?13, ?14, ?14
+          ${key}, ${proposalId}, ${Number(version)}, ${clientName},
+          ${clientEmail}, ${businessName}, ${description},
+          ${acceptanceReference}, ${immutableFingerprint},
+          ${Number(depositAmount)}, ${currency}, 'deposit_requested',
+          ${acceptedAt}, ${dueAt}, ${now}, ${now}
         )
-        ON CONFLICT(proposal_id, version) DO NOTHING`,
-      )
-      .bind(
-        key,
-        proposalId,
-        Number(version),
-        clientName,
-        clientEmail,
-        businessName,
-        description,
-        acceptanceReference,
-        immutableFingerprint,
-        Number(depositAmount),
-        currency,
-        acceptedAt,
-        dueAt,
-        now,
-      )
-      .run();
+        ON CONFLICT (proposal_id, version) DO NOTHING
+        RETURNING immutable_fingerprint`;
+    const created = inserted.length === 1;
 
-    if (!result.meta.changes) {
-      const existing = await database
-        .prepare(
-          `SELECT immutable_fingerprint
-          FROM payment_proposals
-          WHERE proposal_id = ?1 AND version = ?2`,
-        )
-        .bind(proposalId, Number(version))
-        .first<{ immutable_fingerprint: string }>();
+    if (!created) {
+      const [existing] = await database<{ immutable_fingerprint: string }[]>`
+          SELECT immutable_fingerprint
+          FROM jour_payments.payment_proposals
+          WHERE proposal_id = ${proposalId} AND version = ${Number(version)}
+          LIMIT 1`;
       if (
         !existing ||
         !constantTimeEqual(
@@ -208,7 +191,7 @@ export async function POST(request: Request) {
     const token = await createPaymentToken(
       proposalId,
       Number(version),
-      await requireLongSecret("PAYMENT_LINK_SECRET"),
+      requireLongSecret("PAYMENT_LINK_SECRET"),
     );
     const paymentUrl = `${await paymentPublicUrl(request)}/payment/${encodeURIComponent(token)}`;
 
@@ -217,9 +200,9 @@ export async function POST(request: Request) {
         proposalId,
         version: Number(version),
         paymentUrl,
-        created: Boolean(result.meta.changes),
+        created,
       },
-      { status: result.meta.changes ? 201 : 200 },
+      { status: created ? 201 : 200 },
     );
   } catch (error) {
     if (error instanceof TypeError) {

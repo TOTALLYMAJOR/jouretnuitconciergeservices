@@ -40,19 +40,14 @@ async function reusableCheckout(
     return session.url;
   }
 
-  await (await paymentDb())
-    .prepare(
-      `UPDATE payment_checkout_sessions
-      SET status = ?1, payment_status = ?2, updated_at = ?3
-      WHERE id = ?4`,
-    )
-    .bind(
-      session.status === "expired" ? "expired" : "complete",
-      session.payment_status,
-      Date.now(),
-      checkout.id,
-    )
-    .run();
+  const database = paymentDb();
+  await database`
+      UPDATE jour_payments.payment_checkout_sessions
+      SET
+        status = ${session.status === "expired" ? "expired" : "complete"},
+        payment_status = ${session.payment_status},
+        updated_at = ${Date.now()}
+      WHERE id = ${checkout.id}`;
   return null;
 }
 
@@ -77,7 +72,7 @@ export async function POST(request: Request) {
 
     const tokenValues = await parseAndVerifyPaymentToken(
       body.token,
-      await requireLongSecret("PAYMENT_LINK_SECRET"),
+      requireLongSecret("PAYMENT_LINK_SECRET"),
     );
     if (!tokenValues) {
       return NextResponse.json(
@@ -165,35 +160,25 @@ export async function POST(request: Request) {
     }
 
     const now = Date.now();
-    const database = await paymentDb();
-    await database.batch([
-      database
-        .prepare(
-          `INSERT INTO payment_checkout_sessions (
+    const database = paymentDb();
+    await database.begin(async (transaction) => {
+      await transaction`
+          INSERT INTO jour_payments.payment_checkout_sessions (
             id, proposal_key, attempt, status, payment_status, amount_total,
             currency, expires_at, created_at, updated_at
-          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)
-          ON CONFLICT(id) DO UPDATE SET updated_at = excluded.updated_at`,
-        )
-        .bind(
-          session.id,
-          proposal.key,
-          attempt,
-          session.status,
-          session.payment_status,
-          session.amount_total,
-          session.currency,
-          session.expires_at ? session.expires_at * 1000 : null,
-          now,
-        ),
-      database
-        .prepare(
-          `UPDATE payment_proposals
-          SET status = 'deposit_pending', updated_at = ?1
-          WHERE key = ?2 AND status = 'deposit_requested'`,
-        )
-        .bind(now, proposal.key),
-    ]);
+          ) VALUES (
+            ${session.id}, ${proposal.key}, ${attempt}, ${session.status},
+            ${session.payment_status}, ${session.amount_total},
+            ${session.currency},
+            ${session.expires_at ? session.expires_at * 1000 : null},
+            ${now}, ${now}
+          )
+          ON CONFLICT (id) DO UPDATE SET updated_at = EXCLUDED.updated_at`;
+      await transaction`
+          UPDATE jour_payments.payment_proposals
+          SET status = 'deposit_pending', updated_at = ${now}
+          WHERE key = ${proposal.key} AND status = 'deposit_requested'`;
+    });
 
     return checkoutResponse(session.url);
   } catch (error) {

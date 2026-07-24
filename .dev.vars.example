@@ -1,4 +1,6 @@
 # Copy to .dev.vars for local Wrangler development. Never commit .dev.vars.
+# Use the Supabase transaction-pooler URL (port 6543) with SSL enabled.
+SUPABASE_DATABASE_URL=postgresql://postgres.PROJECT_REF:replace@POOLER_HOST:6543/postgres
 # Prefer a restricted Stripe test key with only Checkout Session read/write.
 STRIPE_API_KEY=rk_test_replace_in_local_secret_store
 STRIPE_WEBHOOK_SECRET=whsec_replace_from_stripe_cli
