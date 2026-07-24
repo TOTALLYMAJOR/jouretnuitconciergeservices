@@ -1,0 +1,370 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "22f09020-ac2a-4693-b0f6-f3054aa7735f",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "payment_checkout_sessions": {
+      "name": "payment_checkout_sessions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "proposal_key": {
+          "name": "proposal_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "attempt": {
+          "name": "attempt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payment_status": {
+          "name": "payment_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount_total": {
+          "name": "amount_total",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "payment_checkout_sessions_proposal_attempt_unique": {
+          "name": "payment_checkout_sessions_proposal_attempt_unique",
+          "columns": [
+            "proposal_key",
+            "attempt"
+          ],
+          "isUnique": true
+        },
+        "payment_checkout_sessions_proposal_idx": {
+          "name": "payment_checkout_sessions_proposal_idx",
+          "columns": [
+            "proposal_key"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "payment_checkout_sessions_proposal_key_payment_proposals_key_fk": {
+          "name": "payment_checkout_sessions_proposal_key_payment_proposals_key_fk",
+          "tableFrom": "payment_checkout_sessions",
+          "tableTo": "payment_proposals",
+          "columnsFrom": [
+            "proposal_key"
+          ],
+          "columnsTo": [
+            "key"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "payment_checkout_sessions_status_valid": {
+          "name": "payment_checkout_sessions_status_valid",
+          "value": "\"payment_checkout_sessions\".\"status\" IN ('open', 'complete', 'expired')"
+        },
+        "payment_checkout_sessions_payment_status_valid": {
+          "name": "payment_checkout_sessions_payment_status_valid",
+          "value": "\"payment_checkout_sessions\".\"payment_status\" IN ('unpaid', 'paid', 'no_payment_required')"
+        }
+      }
+    },
+    "payment_proposals": {
+      "name": "payment_proposals",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "proposal_id": {
+          "name": "proposal_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "client_name": {
+          "name": "client_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "client_email": {
+          "name": "client_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "business_name": {
+          "name": "business_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "acceptance_reference": {
+          "name": "acceptance_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "immutable_fingerprint": {
+          "name": "immutable_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "deposit_amount": {
+          "name": "deposit_amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'deposit_requested'"
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "due_at": {
+          "name": "due_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "deposit_verified_at": {
+          "name": "deposit_verified_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "payment_proposals_id_version_unique": {
+          "name": "payment_proposals_id_version_unique",
+          "columns": [
+            "proposal_id",
+            "version"
+          ],
+          "isUnique": true
+        },
+        "payment_proposals_fingerprint_unique": {
+          "name": "payment_proposals_fingerprint_unique",
+          "columns": [
+            "immutable_fingerprint"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "payment_proposals_version_positive": {
+          "name": "payment_proposals_version_positive",
+          "value": "\"payment_proposals\".\"version\" > 0"
+        },
+        "payment_proposals_deposit_amount_positive": {
+          "name": "payment_proposals_deposit_amount_positive",
+          "value": "\"payment_proposals\".\"deposit_amount\" > 0"
+        },
+        "payment_proposals_currency_lowercase": {
+          "name": "payment_proposals_currency_lowercase",
+          "value": "\"payment_proposals\".\"currency\" = lower(\"payment_proposals\".\"currency\") AND length(\"payment_proposals\".\"currency\") = 3"
+        },
+        "payment_proposals_status_valid": {
+          "name": "payment_proposals_status_valid",
+          "value": "\"payment_proposals\".\"status\" IN ('deposit_requested', 'deposit_pending', 'deposit_verified', 'cancelled', 'expired')"
+        }
+      }
+    },
+    "stripe_webhook_events": {
+      "name": "stripe_webhook_events",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "object_id": {
+          "name": "object_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "processing_status": {
+          "name": "processing_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "message": {
+          "name": "message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "received_at": {
+          "name": "received_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "stripe_webhook_events_type_idx": {
+          "name": "stripe_webhook_events_type_idx",
+          "columns": [
+            "type"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "stripe_webhook_events_processing_status_valid": {
+          "name": "stripe_webhook_events_processing_status_valid",
+          "value": "\"stripe_webhook_events\".\"processing_status\" IN ('processed', 'ignored', 'rejected')"
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

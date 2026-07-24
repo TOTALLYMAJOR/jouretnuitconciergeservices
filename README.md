@@ -30,6 +30,13 @@ Scripts that need writable project-scoped home, npm, XDG, and temporary paths us
 - `examples/d1/` contains an optional D1 example surface
 - `drizzle.config.ts` supports local migration generation when needed
 
+## Proposal Payments
+
+Stripe-hosted Checkout is implemented for immutable, accepted-proposal
+deposits. See [`docs/stripe-payments.md`](docs/stripe-payments.md) for the truth
+boundary, required secrets, D1 migration, webhook events, operator issuance
+request, and sandbox verification procedure.
+
 ## Workspace Auth Headers
 
 OpenAI workspace sites can read the current user's email from

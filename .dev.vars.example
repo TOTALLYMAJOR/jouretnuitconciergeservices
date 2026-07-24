@@ -1,0 +1,7 @@
+# Copy to .dev.vars for local Wrangler development. Never commit .dev.vars.
+# Prefer a restricted Stripe test key with only Checkout Session read/write.
+STRIPE_API_KEY=rk_test_replace_in_local_secret_store
+STRIPE_WEBHOOK_SECRET=whsec_replace_from_stripe_cli
+PAYMENT_ADMIN_TOKEN=replace_with_a_long_random_operator_token
+PAYMENT_LINK_SECRET=replace_with_a_distinct_32_byte_random_secret
+PAYMENT_PUBLIC_URL=http://localhost:3000
