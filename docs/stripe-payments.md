@@ -24,6 +24,8 @@ schema created only after the proposal has been accepted.
 2. Set `SUPABASE_DATABASE_URL` to the Supabase transaction-pooler connection
    URL (port `6543`) in the server-side hosting secret store. The database
    client disables prepared statements for transaction-pooler compatibility.
+   When the Supabase Vercel integration supplies `POSTGRES_URL`, the runtime
+   accepts that synchronized value instead.
 3. Store these values in the hosting secret store, never in Git:
    - `STRIPE_API_KEY`: preferably a restricted key with the minimum Checkout
      Session permissions needed by this service.

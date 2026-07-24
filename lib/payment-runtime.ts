@@ -4,6 +4,7 @@ import { STRIPE_API_VERSION } from "./payment-domain";
 
 type PaymentBindings = {
   SUPABASE_DATABASE_URL?: string;
+  POSTGRES_URL?: string;
   STRIPE_API_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
   PAYMENT_ADMIN_TOKEN?: string;
@@ -43,19 +44,28 @@ let database: ReturnType<typeof postgres> | null = null;
 let databaseUrl: string | null = null;
 
 export function paymentDb() {
-  const connectionString = requireBinding("SUPABASE_DATABASE_URL");
+  const bindings = paymentBindings();
+  const connectionString =
+    bindings.SUPABASE_DATABASE_URL?.trim() ||
+    bindings.POSTGRES_URL?.trim();
+  if (!connectionString) {
+    throw new PaymentConfigurationError(
+      "SUPABASE_DATABASE_URL or POSTGRES_URL is unavailable.",
+    );
+  }
+
   let parsedUrl: URL;
   try {
     parsedUrl = new URL(connectionString);
   } catch {
     throw new PaymentConfigurationError(
-      "SUPABASE_DATABASE_URL must be a valid PostgreSQL connection URL.",
+      "The database setting must be a valid PostgreSQL connection URL.",
     );
   }
 
   if (!["postgres:", "postgresql:"].includes(parsedUrl.protocol)) {
     throw new PaymentConfigurationError(
-      "SUPABASE_DATABASE_URL must use the PostgreSQL protocol.",
+      "The database setting must use the PostgreSQL protocol.",
     );
   }
 
