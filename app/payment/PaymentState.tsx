@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 type PaymentStateProps = {
-  state: "access" | "returned" | "pending" | "cancelled";
+  state: "access" | "returned" | "pending" | "cancelled" | "verified";
 };
 
 const content = {
@@ -41,6 +41,13 @@ const content = {
     title: "No payment was confirmed.",
     copy: "You may return to the secure link in your proposal if you still wish to complete the deposit. Cancelling checkout does not cancel an accepted proposal unless its terms say otherwise.",
     status: "Payment not completed",
+  },
+  verified: {
+    icon: ShieldCheck,
+    kicker: "Payment verified",
+    title: "Stripe confirmed the proposal deposit.",
+    copy: "The exact deposit tied to the accepted proposal has been verified. Jour et Nuit will confirm the next authorized onboarding step separately.",
+    status: "Deposit verified",
   },
 };
 
