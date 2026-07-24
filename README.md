@@ -1,8 +1,19 @@
-# vinext-starter
+# Jour et Nuit Concierge Services
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+The Jour et Nuit public website and accepted-proposal deposit workflow. The
+application runs on Next.js/Vinext, deploys to Vercel, stores payment truth in
+Supabase Postgres, and uses Stripe-hosted Checkout.
+
+## Feature status
+
+[`docs/feature-log.md`](docs/feature-log.md) is the canonical delivery record.
+It separates implemented code, repository validation, provider proof, hosted
+Preview proof, and production verification.
+
+Cloudflare D1 is not configured or used by the Jour et Nuit application.
+`.openai/hosting.json` explicitly declares `"d1": null`. Optional D1 example
+files inherited from the starter remain reference-only and are not part of the
+payment runtime.
 
 ## Prerequisites
 
@@ -19,16 +30,15 @@ This starter does not use `wrangler.jsonc`.
 
 Scripts that need writable project-scoped home, npm, XDG, and temporary paths use `scripts/sites-env.sh`. The `dev` and `start` scripts honor the caller's runtime environment and keep Wrangler logs inside the checkout. The generated `.sites-runtime/` directory is disposable and ignored by Git.
 
-## Included Shape
+## Repository shape
 
 - edit site code under `app/`
 - `app/chatgpt-auth.ts` provides optional dispatch-owned ChatGPT sign-in helpers
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/index.ts` reads the D1 binding from the Cloudflare Worker environment
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
+- `lib/payment-*` owns proposal-payment boundaries and provider adapters
+- `supabase/migrations/` owns the private payment-persistence schema
+- `docs/stripe-payments.md` documents the payment truth boundary and operation
+- `docs/feature-log.md` records delivery status and verification evidence
+- `examples/d1/` is inactive starter reference material
 
 ## Proposal Payments
 
